@@ -1,0 +1,44 @@
+pins:
+  encoder:
+    key: 15
+    left: 13
+    right: 11
+  dsp:
+    opt: 22
+    aux: 24
+    tv: 26
+    button: 8
+    dsp_button: 7
+
+i2c:
+  bus_number: 0
+  pt2258: 
+    address: 0x88
+  display:
+    address: 0x3C
+
+display:
+  font: "/home/kimifish/bin/soundmaster2/fonts/RobotoCondensed-Regular.ttf"
+  size: 30
+
+soundcard_status_file: "/proc/asound/card0/pcm0p/sub0/status"
+
+mqtt:
+  server:
+    - mqtt.lan
+    - mqtt.zt
+    - kimihome.lan
+    - kimihome.zt
+    - 192.168.1.10
+    - 192.168.196.10
+  port: 1883
+  main_topic: "kimiHome/audio/soundmaster"
+
+logging:
+  level: "DEBUG"
+  format: "%(message)s"
+  date_format: "[%X]"
+  markup: true
+  rich_tracebacks: true
+  show_time: true
+  show_path: true
