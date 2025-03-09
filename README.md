@@ -1,6 +1,8 @@
 # SoundMaster
 
-Audio control system for PT2258-based volume control with OLED display and rotary encoder support.
+An experimental project combining various hardware interfaces and technologies to create an audio control system. This project serves as a practical exploration of working with I2C devices, GPIO controls, MQTT communication, and display interfaces on single-board computers.
+
+The system provides volume control through a PT2258 chip, with an OLED display for visual feedback and both physical (rotary encoder) and network (MQTT) controls. It's primarily developed as a learning exercise and technology demonstration.
 
 ## Features
 
