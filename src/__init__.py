@@ -1,0 +1,3 @@
+"""
+SoundMaster package
+"""

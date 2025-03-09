@@ -1,0 +1,16 @@
+# Display
+luma.oled==3.12.0
+Pillow>=10.0.0
+
+# Hardware interface
+smbus2>=0.4.2
+OPi.GPIO>=0.5.2
+
+# MQTT
+paho-mqtt>=1.6.1
+
+# Utils
+rich>=13.5.2
+kimiconfig>=1.0.0
+kiMQTT>=1.0.0
+kimiUtils>=1.0.0
