@@ -26,6 +26,15 @@ def GPIO_cleanup():
     GPIO.cleanup()
 
 class PT2258:
+    """
+    PT2258 6-channel electronic volume controller IC driver.
+    
+    Based on the original implementation by Vijay (github.com/zerovijay/PT2258).
+    Thanks to Vijay for the initial implementation and reverse engineering of the PT2258 protocol.
+    
+    This class provides an interface to control the PT2258 volume controller IC via I2C,
+    supporting master volume, individual channel volume, and mute functionality.
+    """
     # Constants for clear registers
     __CLEAR_REGISTER = 0xC0
 
@@ -188,13 +197,13 @@ class PT2258:
 
 class AudioCardStatusMonitor(threading.Thread):
     """
-    Поток, который периодически читает /proc/asound/card0/pcm0p/sub0/status
-    и обновляет переменную audio_status ('off' если 'closed\n', иначе 'on').
+    Thread that periodically reads /proc/asound/card0/pcm0p/sub0/status
+    and updates audio_status variable ('off' if 'closed\n', otherwise 'on').
     """
     def __init__(self, interval=1.0, filepath=None):
         """
-        callback: функция, которую вызываем при изменении статуса
-        interval: период опроса (с)
+        callback: function to call when status changes
+        interval: polling period (seconds)
         """
         super().__init__()
         self.interval = interval
@@ -294,31 +303,31 @@ class DSPInputMonitor:
         self.pin1 = pin1
         self.pin2 = pin2
         self.pin3 = pin3
-        self.switch_pin = switch_pin  # Пин для эмуляции переключения
+        self.switch_pin = switch_pin  # Pin for switching emulation
         self.value_list = ["OPi", "Opt1", "Opt2", "AUX"]
         self.stop_event = threading.Event()
         self.callback = None
 
-        # Настройка пинов
+        # Pin configuration
         GPIO.setmode(GPIO.BOARD)
         GPIO.setup(self.pin1, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
         GPIO.setup(self.pin2, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
         GPIO.setup(self.pin3, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
-        GPIO.setup(self.switch_pin, GPIO.OUT)  # Четвертый пин как выход
-        GPIO.output(self.switch_pin, GPIO.LOW)  # Изначально низкий уровень
+        GPIO.setup(self.switch_pin, GPIO.OUT)  # Fourth pin as output
+        GPIO.output(self.switch_pin, GPIO.LOW)  # Initially set to low level
 
-        # Определение начального значения
+        # Determine initial value
         self.current_value = self._determine_value(
             GPIO.input(self.pin1), GPIO.input(self.pin2), GPIO.input(self.pin3)
         )
 
-        # Добавление обработки событий для входных пинов
+        # Add event handlers for input pins
         GPIO.add_event_detect(self.pin1, GPIO.BOTH, callback=self._pin_event)
         GPIO.add_event_detect(self.pin2, GPIO.BOTH, callback=self._pin_event)
         GPIO.add_event_detect(self.pin3, GPIO.BOTH, callback=self._pin_event)
 
     def _determine_value(self, pin1_state, pin2_state, pin3_state):
-        """Определение текущего значения на основе состояния пинов"""
+        """Determine current value based on pin states"""
         if pin1_state and not pin2_state and not pin3_state:
             return "Opt1"
         elif not pin1_state and pin2_state and not pin3_state:
@@ -331,7 +340,7 @@ class DSPInputMonitor:
             return self.current_value
 
     def _pin_event(self, channel):
-        """Обработка изменений на входных пинах"""
+        """Handle changes on input pins"""
         pin1_state = GPIO.input(self.pin1)
         pin2_state = GPIO.input(self.pin2)
         pin3_state = GPIO.input(self.pin3)
@@ -342,9 +351,9 @@ class DSPInputMonitor:
                 self.callback(old_value, new_value)
 
     def _emulate_switch(self):
-        """Эмуляция нажатия кнопки: импульс на 100 мс"""
+        """Emulate button press: 100ms pulse"""
         GPIO.output(self.switch_pin, GPIO.HIGH)
-        time.sleep(0.15)  # 100 мс
+        time.sleep(0.15)  # 100 ms
         GPIO.output(self.switch_pin, GPIO.LOW)
 
     def subscribe(self, callback = None):
@@ -352,17 +361,17 @@ class DSPInputMonitor:
             self.callback = callback
 
     def set_value(self, target_value):
-        """Установка желаемого значения с помощью импульсов"""
+        """Set desired value using pulses"""
         if target_value not in self.value_list:
             log.warning(f"Unsupported value: {target_value}")
             return
 
-        max_attempts = 10  # Ограничение на количество попыток
+        max_attempts = 10  # Limit on number of attempts
         attempts = 0
 
         while self.current_value != target_value and attempts < max_attempts:
             self._emulate_switch()
-            time.sleep(0.5)  # Ждать обновления состояния пинов
+            time.sleep(0.5)  # Wait for pin state update
             attempts += 1
 
         if self.current_value == target_value:
@@ -371,11 +380,11 @@ class DSPInputMonitor:
             log.error(f"Changing DSP input to {target_value} failed after 10 attempts.")
 
     def run(self):
-        """Запуск потока (пока не используется)"""
+        """Start thread (not currently used)"""
         pass
 
     def stop(self):
-        """Остановка и очистка"""
+        """Stop and clean up"""
         self.stop_event.set()
         GPIO.cleanup()
 

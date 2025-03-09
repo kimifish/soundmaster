@@ -16,7 +16,7 @@ last_button_event = [time.time(), 0]
 
 
 def on_dsp_input_message(msg: MQTTMessage) -> None:
-    """Обработчик сообщений о смене входа DSP"""
+    """Handler for DSP input change messages"""
     new_input: str = msg.payload.decode()
     EventBus().publish(Event(
         type=EventType.DSP_INPUT_MESSAGE,
@@ -25,11 +25,12 @@ def on_dsp_input_message(msg: MQTTMessage) -> None:
 
 
 def on_dsp_input_pin_event(old_value, new_value):
+    """Handler for DSP input pin state changes"""
     EventBus().publish(Event(EventType.DSP_INPUT_SWITCHED, {"new_input": new_value}))
 
 
 def on_mute_message(msg: MQTTMessage) -> None:
-    """Обработчик сообщений о смене состояния mute"""
+    """Handler for mute state change messages"""
     new_state: str = msg.payload.decode().lower()
     mute_state = new_state == "true"
     # log.debug(f'{new_state=}, {mute_state=}')
@@ -40,7 +41,7 @@ def on_mute_message(msg: MQTTMessage) -> None:
 
 
 def on_master_volume_message(msg: MQTTMessage) -> None:
-    """Обработчик сообщений о смене громкости"""
+    """Handler for master volume change messages"""
     try:
         new_volume = int(msg.payload.decode())
         new_volume = max(0, min(79, new_volume))
@@ -55,7 +56,7 @@ def on_master_volume_message(msg: MQTTMessage) -> None:
 
 
 def on_channel_volumes_message(msg: MQTTMessage) -> None:
-    """Обработчик сообщений о смене громкости канала"""
+    """Handler for channel volume change messages"""
     try:
         payload = msg.payload.decode()
         volume_data = json.loads(payload)
@@ -67,7 +68,7 @@ def on_channel_volumes_message(msg: MQTTMessage) -> None:
                     data={'channels': channel_volumes}
                 ))
     except json.ValueError:
-        log.error(f"Error in cnannels volume message, all values should be int: {msg.payload}")
+        log.error(f"Error in channels volume message, all values should be int: {msg.payload}")
     except json.JSONDecodeError:
         log.error(f"Error decoding JSON in channels volume message: {msg.payload}")
     except Exception as e:
@@ -75,6 +76,7 @@ def on_channel_volumes_message(msg: MQTTMessage) -> None:
 
 
 def on_encoder_rotation(value: list):
+    """Handler for encoder rotation events with acceleration"""
     global last_rotation_event
     acceleration = [
         (10, 0.1),
@@ -98,10 +100,12 @@ def on_encoder_rotation(value: list):
 
 
 def on_audiostatus_changed(state: str):
+    """Handler for audio status change events"""
     EventBus().publish(Event(type=EventType.AUDIOSTATUS_CHANGED, data={'state': state}))
 
 
 def on_encoder_press(value: list):
+    """Handler for encoder button press events"""
     global last_button_event
     old_time, old_event = last_button_event
     new_time, new_event = value
@@ -121,10 +125,21 @@ def on_encoder_press(value: list):
 
 
 def subscribe_callbacks():
-    cfg.mqtt.client.subscribe("kimiHome/audio/soundmaster/Active_Input/set", on_dsp_input_message)
-    cfg.mqtt.client.subscribe("kimiHome/audio/soundmaster/Volume/set", on_master_volume_message)
-    cfg.mqtt.client.subscribe("kimiHome/audio/soundmaster/Volume/channels/set", on_channel_volumes_message)
-    cfg.mqtt.client.subscribe("kimiHome/audio/soundmaster/Mute/set", on_mute_message)
+    """Subscribe to MQTT topics and hardware events"""
+    # MQTT subscriptions
+    main_topic = cfg.mqtt.main_topic
+    for topic_name, topic_path in cfg.mqtt.topics.set.items():
+        full_topic = f"{main_topic}/{topic_path}"
+        if topic_name == "active_input":
+            cfg.mqtt.client.subscribe(full_topic, on_dsp_input_message)
+        elif topic_name == "volume":
+            cfg.mqtt.client.subscribe(full_topic, on_master_volume_message)
+        elif topic_name == "volume_channels":
+            cfg.mqtt.client.subscribe(full_topic, on_channel_volumes_message)
+        elif topic_name == "mute":
+            cfg.mqtt.client.subscribe(full_topic, on_mute_message)
+
+    # Hardware subscriptions
     cfg.rt.encoder.subscribe(press_callback=on_encoder_press, rotation_callback=on_encoder_rotation)
     cfg.rt.dsp_monitor.subscribe(callback=on_dsp_input_pin_event)
     cfg.rt.audiostatus_monitor.subscribe(callback=on_audiostatus_changed)

@@ -4,7 +4,7 @@ Audio control system for PT2258-based volume control with OLED display and rotar
 
 ## Features
 
-- Volume control via PT2258 chip
+- Volume control via PT2258 chip (driver based on [Vijay's implementation](https://github.com/zerovijay/PT2258))
 - OLED display showing volume, input source, and mute status
 - Rotary encoder with push button for control
 - MQTT integration for remote control

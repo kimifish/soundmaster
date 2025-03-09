@@ -28,13 +28,14 @@ def safe_pt2258():
         yield None
 
 
-def publish_mqtt(topic: str) -> Callable:
+def publish_mqtt(topic_name: str) -> Callable:
     """Decorator for MQTT publishing with auto-formatting of topic"""
     def decorator(func: Callable) -> Callable:
         @wraps(func)
         def wrapper(*args, **kwargs):
             result = func(*args, **kwargs)
-            full_topic = f"{cfg.mqtt.main_topic}/{topic}"
+            topic_path = cfg.mqtt.topics.get(topic_name, topic_name)
+            full_topic = f"{cfg.mqtt.main_topic}/{topic_path}"
             cfg.mqtt.client.publish(full_topic, result)
             return result
         return wrapper
@@ -79,7 +80,7 @@ def clamp_volume(value: int) -> int:
     return max(VOLUME_MIN, min(VOLUME_MAX, value))
 
 
-@publish_mqtt("Mute")
+@publish_mqtt("mute")
 def _act_mute() -> str:
     """Apply mute state to PT2258 and return MQTT payload"""
     with safe_pt2258() as pt2258:
@@ -90,7 +91,7 @@ def _act_mute() -> str:
     return str(cfg.rt.mute_state).lower()
 
 
-@publish_mqtt("Volume")
+@publish_mqtt("volume")
 def _change_master_volume() -> int:
     """Apply master volume to PT2258 and return MQTT payload"""
     with safe_pt2258() as pt2258:
@@ -99,7 +100,7 @@ def _change_master_volume() -> int:
     return cfg.rt.master_volume
 
 
-@publish_mqtt("Volume/channels")
+@publish_mqtt("volume_channels")
 def _change_channel_volumes() -> str:
     """Apply channel volumes to PT2258 and return MQTT payload"""
     with safe_pt2258() as pt2258:
@@ -165,17 +166,19 @@ def handle_dsp_input_message(event: Event) -> None:
 
 @save_state
 @update_display('input')
-def handle_dsp_input_switched(event: Event) -> None:
+@publish_mqtt("active_input")
+def handle_dsp_input_switched(event: Event) -> str:
     """Handle DSP input switch event"""
     cfg.update("rt.active_input", event.data.get("new_input"))
-    cfg.mqtt.client.publish(f"{cfg.mqtt.main_topic}/Active_Input", cfg.rt.active_input)
+    return cfg.rt.active_input
 
 
-def handle_audiostatus_changed(event: Event) -> None:
+@publish_mqtt("audio_status")
+def handle_audiostatus_changed(event: Event) -> str:
     """Handle audio status change event"""
     cfg.update("rt.state", event.data['state'])
-    cfg.mqtt.client.publish(f"{cfg.mqtt.main_topic}/Audio_Status", cfg.rt.state)
     log.info(f'Audio output status: {event.data["state"]}')
+    return cfg.rt.state
 
 
 @update_display('input')

@@ -33,6 +33,18 @@ mqtt:
     - 192.168.196.10
   port: 1883
   main_topic: "kimiHome/audio/soundmaster"
+  topics:
+    active_input: "Active_Input"
+    volume: "Volume"
+    volume_channels: "Volume/channels"
+    mute: "Mute"
+    audio_status: "Audio_Status"
+    # Topics for receiving commands (with /set suffix)
+    set:
+      active_input: "Active_Input/set"
+      volume: "Volume/set"
+      volume_channels: "Volume/channels/set"
+      mute: "Mute/set"
 
 logging:
   level: "DEBUG"
